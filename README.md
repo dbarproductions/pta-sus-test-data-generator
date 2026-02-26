@@ -29,7 +29,7 @@ All data is created through the core plugin's model layer (`pta_sus_add_sheet()`
 
 1. Clone or download this repository into your `wp-content/plugins/` directory:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/pta-sus-test-data-generator.git
+   git clone https://github.com/dbarproductions/pta-sus-test-data-generator.git
    ```
 2. Activate **PTA Volunteer Sign-Up Sheets** first.
 3. Activate **PTA SUS Test Data Generator** in WP Admin → Plugins.
