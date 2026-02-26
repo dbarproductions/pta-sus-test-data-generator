@@ -1,0 +1,16 @@
+# WordPress
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Composer / Node (not used currently, but good to have)
+vendor/
+node_modules/

@@ -1,0 +1,202 @@
+/* PTA SUS Test Data Generator — Admin Styles */
+
+#ptg-wrap {
+    max-width: 860px;
+}
+
+#ptg-wrap h1 {
+    margin-bottom: 12px;
+}
+
+/* Tab nav */
+.ptg-tab-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #c3c4c7;
+    margin-bottom: 20px;
+}
+
+.ptg-tab-nav a {
+    display: inline-block;
+    padding: 8px 18px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    color: #50575e;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    background: #f0f0f1;
+    margin-bottom: -1px;
+    transition: background 0.1s;
+}
+
+.ptg-tab-nav a:hover {
+    background: #fff;
+    color: #2271b1;
+}
+
+.ptg-tab-nav a.ptg-tab-active {
+    background: #fff;
+    border-color: #c3c4c7;
+    border-bottom-color: #fff;
+    color: #1d2327;
+}
+
+/* Tab panels */
+.ptg-tab-panel {
+    display: none;
+}
+
+.ptg-tab-panel.ptg-panel-active {
+    display: block;
+}
+
+/* Form layout */
+.ptg-form-table th {
+    width: 220px;
+    padding: 12px 10px 12px 0;
+    vertical-align: middle;
+}
+
+.ptg-form-table td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+
+.ptg-form-table input[type="number"] {
+    width: 80px;
+}
+
+.ptg-range-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ptg-range-group label {
+    margin: 0;
+}
+
+.ptg-form-table input[type="range"] {
+    vertical-align: middle;
+    width: 160px;
+}
+
+.ptg-fill-display {
+    display: inline-block;
+    min-width: 38px;
+    font-weight: 600;
+    color: #2271b1;
+}
+
+/* Result summary — extends WP's .notice.notice-success.is-dismissible */
+.ptg-result {
+    margin-bottom: 20px;
+}
+
+.ptg-result h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+}
+
+.ptg-result table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ptg-result table th,
+.ptg-result table td {
+    text-align: left;
+    padding: 5px 10px 5px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.ptg-result table th {
+    color: #646970;
+    font-weight: 500;
+}
+
+.ptg-result .ptg-password-note {
+    background: #fcf9e8;
+    border: 1px solid #dba617;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+/* Cleanup tab */
+.ptg-summary-boxes {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.ptg-summary-box {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 100px;
+}
+
+.ptg-summary-box .ptg-count {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #2271b1;
+}
+
+.ptg-summary-box .ptg-label {
+    font-size: 12px;
+    color: #646970;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.ptg-delete-section {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.ptg-delete-section h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+}
+
+.ptg-delete-section p {
+    margin: 0 0 12px;
+    color: #50575e;
+    font-size: 13px;
+}
+
+.ptg-delete-all-section {
+    background: #fef7f1;
+    border: 1px solid #d63638;
+    border-radius: 4px;
+    padding: 16px 20px;
+    margin-top: 24px;
+}
+
+.ptg-delete-all-section h3 {
+    margin: 0 0 8px;
+    color: #d63638;
+    font-size: 14px;
+}
+
+/* Notices */
+.ptg-notice-warning {
+    background: #fcf9e8;
+    border: 1px solid #dba617;
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
