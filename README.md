@@ -1,6 +1,6 @@
 # PTA SUS Test Data Generator
 
-A WordPress plugin that quickly populates a **local or development** environment with realistic test data — users, sign-up sheets, tasks, and signups — for the [PTA Volunteer Sign-Up Sheets](https://github.com/) plugin.
+A WordPress plugin that quickly populates a **local or development** environment with realistic test data — users, sign-up sheets, tasks, and signups — for the [PTA Volunteer Sign-Up Sheets](https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/) plugin.
 
 > ⚠️ **This plugin is intended for development and testing only.** Do not activate it on a production site.
 
@@ -21,7 +21,7 @@ All data is created through the core plugin's model layer (`pta_sus_add_sheet()`
 
 - WordPress 6.0+
 - PHP 7.4+
-- [PTA Volunteer Sign-Up Sheets](https://github.com/) v6.2.0+ must be installed and active
+- [PTA Volunteer Sign-Up Sheets](https://stephensherrardplugins.com/plugins/pta-volunteer-sign-up-sheets/) v6.2.0+ must be installed and active
 
 ---
 
