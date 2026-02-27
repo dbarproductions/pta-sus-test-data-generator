@@ -92,7 +92,7 @@ class PTG_Sheet_Generator {
 			$tasks_created = 0;
 
 			foreach ( $task_titles as $idx => $task_title ) {
-				$task_dates  = self::task_dates_string( $sheet_type, $dates );
+				$task_dates  = self::task_dates_string( $sheet_type, $dates, $idx );
 				$start_time  = self::random_time();
 				$end_time    = self::offset_time( $start_time, 2 );
 				$need_details = self::resolve_need_details( $preset );
@@ -255,12 +255,30 @@ class PTG_Sheet_Generator {
 	}
 
 	/**
-	 * Build the comma-separated task dates string from the sheet's date info.
+	 * Build the task dates string from the sheet's date info.
+	 *
+	 * - Ongoing   → '0000-00-00'
+	 * - Single    → single date string
+	 * - Recurring → comma-separated list (all dates, shared by every task)
+	 * - Multi-Day → single date per task, cycling through the available dates
+	 *
+	 * @param string $sheet_type  Sheet type string.
+	 * @param array  $dates       Date info from generate_dates().
+	 * @param int    $task_index  Zero-based task position (used for Multi-Day cycling).
+	 * @return string
 	 */
-	private static function task_dates_string( $sheet_type, $dates ) {
+	private static function task_dates_string( $sheet_type, $dates, $task_index = 0 ) {
 		if ( 'Ongoing' === $sheet_type ) {
 			return '0000-00-00';
 		}
+		if ( 'Multi-Day' === $sheet_type ) {
+			// Each task gets exactly one date; cycle through the pool so all dates are represented.
+			if ( ! empty( $dates['all'] ) ) {
+				return $dates['all'][ $task_index % count( $dates['all'] ) ];
+			}
+			return $dates['first'];
+		}
+		// Single and Recurring: all tasks share the same date(s).
 		if ( ! empty( $dates['all'] ) ) {
 			return implode( ',', $dates['all'] );
 		}
@@ -322,6 +340,10 @@ class PTG_Sheet_Generator {
 	private static function random_chairs() {
 		// Use require so variables are always in scope regardless of prior includes.
 		require PTG_PATH . 'includes/data/fake-names.php';
+        /**
+         * @var array $ptg_first_names
+         * @var array $ptg_last_names
+         */
 
 		$count  = wp_rand( 1, 3 );
 		$names  = array();
