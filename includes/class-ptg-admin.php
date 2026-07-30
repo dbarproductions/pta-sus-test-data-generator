@@ -238,8 +238,100 @@ class PTG_Admin {
 				</tr>
 			</table>
 
+			<?php self::render_custom_fields_sheet_controls(); ?>
+			<?php self::render_waitlist_sheet_controls(); ?>
+
 			<?php submit_button( __( 'Generate Sheets & Tasks', 'pta-sus-test-data-generator' ), 'primary', 'ptg_submit_sheets' ); ?>
 		</form>
+		<?php
+	}
+
+	/**
+	 * Custom Fields controls for the Sheets & Tasks tab - only rendered when the
+	 * Custom Fields extension is active, and only if there's actually eligible
+	 * data (fields/templates) configured for it to use.
+	 */
+	private static function render_custom_fields_sheet_controls() {
+		if ( ! class_exists( 'Pta_Volunteer_Sus_Custom_Fields' ) ) {
+			return;
+		}
+
+		$has_sheet_task_fields = false;
+		foreach ( PTAVCF_Field_Functions::get_fields() as $field ) {
+			if ( $field->use_on_sheets() || $field->use_on_tasks() ) {
+				$has_sheet_task_fields = true;
+				break;
+			}
+		}
+		$has_templates = ! empty( PTAVCF_Template_Functions::get_template_ids() );
+
+		if ( ! $has_sheet_task_fields && ! $has_templates ) {
+			return;
+		}
+		?>
+		<h3><?php esc_html_e( 'Custom Fields', 'pta-sus-test-data-generator' ); ?></h3>
+		<table class="form-table ptg-form-table">
+			<?php if ( $has_sheet_task_fields ) : ?>
+			<tr>
+				<th><label for="ptg-cf-field-fill-pct"><?php esc_html_e( 'Fill sheet/task field values', 'pta-sus-test-data-generator' ); ?></label></th>
+				<td>
+					<input type="number" id="ptg-cf-field-fill-pct" name="ptg_cf_field_fill_pct" value="80" min="0" max="100" style="width:64px;"> %
+					<p class="description"><?php esc_html_e( 'Chance to fill each eligible sheet/task-level Custom Field.', 'pta-sus-test-data-generator' ); ?></p>
+				</td>
+			</tr>
+			<?php else : ?>
+			<tr>
+				<td colspan="2"><p class="description"><?php esc_html_e( 'No sheet/task-level Custom Fields configured yet - skipping.', 'pta-sus-test-data-generator' ); ?></p></td>
+			</tr>
+			<?php endif; ?>
+			<?php if ( $has_templates ) : ?>
+			<tr>
+				<th><label for="ptg-cf-template-assign-pct"><?php esc_html_e( 'Assign a Signup Template to sheets', 'pta-sus-test-data-generator' ); ?></label></th>
+				<td>
+					<input type="number" id="ptg-cf-template-assign-pct" name="ptg_cf_template_assign_pct" value="70" min="0" max="100" style="width:64px;"> %
+				</td>
+			</tr>
+			<tr>
+				<th><label for="ptg-cf-task-template-override-pct"><?php esc_html_e( 'Also assign a different Template directly to one task', 'pta-sus-test-data-generator' ); ?></label></th>
+				<td>
+					<input type="number" id="ptg-cf-task-template-override-pct" name="ptg_cf_task_template_override_pct" value="30" min="0" max="100" style="width:64px;"> %
+					<p class="description"><?php esc_html_e( 'Exercises the task-overrides-sheet template fallback.', 'pta-sus-test-data-generator' ); ?></p>
+				</td>
+			</tr>
+			<?php else : ?>
+			<tr>
+				<td colspan="2"><p class="description"><?php esc_html_e( 'No Signup Templates configured yet - skipping.', 'pta-sus-test-data-generator' ); ?></p></td>
+			</tr>
+			<?php endif; ?>
+		</table>
+		<?php
+	}
+
+	/**
+	 * Waitlists controls for the Sheets & Tasks tab - only rendered when the
+	 * Waitlists extension is active and at least one Waitlist is configured.
+	 */
+	private static function render_waitlist_sheet_controls() {
+		if ( ! class_exists( 'PTAVWL_Waitlist_Functions' ) ) {
+			return;
+		}
+		if ( empty( PTAVWL_Waitlist_Functions::get_waitlist_ids() ) ) {
+			?>
+			<h3><?php esc_html_e( 'Waitlists', 'pta-sus-test-data-generator' ); ?></h3>
+			<p class="description"><?php esc_html_e( 'No Waitlists configured yet - skipping.', 'pta-sus-test-data-generator' ); ?></p>
+			<?php
+			return;
+		}
+		?>
+		<h3><?php esc_html_e( 'Waitlists', 'pta-sus-test-data-generator' ); ?></h3>
+		<table class="form-table ptg-form-table">
+			<tr>
+				<th><label for="ptg-wl-assign-pct"><?php esc_html_e( 'Assign a Waitlist to tasks', 'pta-sus-test-data-generator' ); ?></label></th>
+				<td>
+					<input type="number" id="ptg-wl-assign-pct" name="ptg_wl_assign_pct" value="30" min="0" max="100" style="width:64px;"> %
+				</td>
+			</tr>
+		</table>
 		<?php
 	}
 
@@ -299,8 +391,51 @@ class PTG_Admin {
 				</tr>
 			</table>
 
+			<?php self::render_waitlist_signup_controls(); ?>
+
 			<?php submit_button( __( 'Generate Signups', 'pta-sus-test-data-generator' ), 'primary', 'ptg_submit_signups' ); ?>
 		</form>
+		<?php
+	}
+
+	/**
+	 * Waitlist Signups controls for the Signups tab - only rendered when the
+	 * Waitlists extension is active and at least one tracked task has a
+	 * Waitlist assigned (assigned via the Sheets & Tasks tab).
+	 */
+	private static function render_waitlist_signup_controls() {
+		if ( ! class_exists( 'PTAVWL_Waitlist_Functions' ) || ! class_exists( 'PTA_SUS_Task_Functions' ) ) {
+			return;
+		}
+
+		$has_waitlist_task = false;
+		foreach ( PTG_Tracker::get_sheet_ids() as $sheet_id ) {
+			foreach ( PTA_SUS_Task_Functions::get_tasks( $sheet_id ) as $task ) {
+				if ( ! empty( $task->waitlist_id ) ) {
+					$has_waitlist_task = true;
+					break 2;
+				}
+			}
+		}
+		if ( ! $has_waitlist_task ) {
+			return;
+		}
+		?>
+		<h3><?php esc_html_e( 'Waitlist Signups', 'pta-sus-test-data-generator' ); ?></h3>
+		<p class="description"><?php esc_html_e( 'Tasks with a Waitlist assigned will be filled to capacity first (regardless of the Fill rate above), then given this many waitlist signups.', 'pta-sus-test-data-generator' ); ?></p>
+		<table class="form-table ptg-form-table">
+			<tr>
+				<th><?php esc_html_e( 'Waitlist signups per full task/date', 'pta-sus-test-data-generator' ); ?></th>
+				<td>
+					<span class="ptg-range-group">
+						<label for="ptg-wl-min"><?php esc_html_e( 'Min', 'pta-sus-test-data-generator' ); ?></label>
+						<input type="number" id="ptg-wl-min" name="ptg_wl_min_per_task" value="1" min="0" max="50" style="width:60px;">
+						<label for="ptg-wl-max"><?php esc_html_e( 'Max', 'pta-sus-test-data-generator' ); ?></label>
+						<input type="number" id="ptg-wl-max" name="ptg_wl_max_per_task" value="4" min="0" max="50" style="width:60px;">
+					</span>
+				</td>
+			</tr>
+		</table>
 		<?php
 	}
 
@@ -452,13 +587,15 @@ class PTG_Admin {
 			count( $sheets )
 		) . '</h3>';
 		if ( ! empty( $sheets ) ) {
-			echo '<table><thead><tr><th>' . esc_html__( 'Title', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Type', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Tasks Created', 'pta-sus-test-data-generator' ) . '</th></tr></thead><tbody>';
+			echo '<table><thead><tr><th>' . esc_html__( 'Title', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Type', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Tasks Created', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Templates Assigned', 'pta-sus-test-data-generator' ) . '</th><th>' . esc_html__( 'Waitlists Assigned', 'pta-sus-test-data-generator' ) . '</th></tr></thead><tbody>';
 			foreach ( $sheets as $sh ) {
 				printf(
-					'<tr><td>%s</td><td>%s</td><td>%d</td></tr>',
+					'<tr><td>%s</td><td>%s</td><td>%d</td><td>%d</td><td>%d</td></tr>',
 					esc_html( $sh['title'] ),
 					esc_html( $sh['type'] ),
-					absint( $sh['task_count'] )
+					absint( $sh['task_count'] ),
+					absint( $sh['template_assignments'] ?? 0 ),
+					absint( $sh['waitlist_assignments'] ?? 0 )
 				);
 			}
 			echo '</tbody></table>';
@@ -476,6 +613,13 @@ class PTG_Admin {
 				/* translators: %d = count */
 				esc_html__( '%d spot(s) skipped (already full or rejected by validation).', 'pta-sus-test-data-generator' ),
 				absint( $result['skipped'] )
+			) . '</p>';
+		}
+		if ( ! empty( $result['waitlist_total'] ) ) {
+			echo '<p>' . sprintf(
+				/* translators: %d = count */
+				esc_html__( '%d waitlist signup(s) also created.', 'pta-sus-test-data-generator' ),
+				absint( $result['waitlist_total'] )
 			) . '</p>';
 		}
 		if ( ! empty( $result['by_sheet'] ) ) {
@@ -539,13 +683,17 @@ class PTG_Admin {
 		}
 
 		$options = array(
-			'preset'        => sanitize_key( $_POST['ptg_preset']        ?? 'random' ),
-			'count'         => absint( $_POST['ptg_count']               ?? 3 ),
-			'tasks_min'     => absint( $_POST['ptg_tasks_min']           ?? 2 ),
-			'tasks_max'     => absint( $_POST['ptg_tasks_max']           ?? 5 ),
-			'start_weeks'   => absint( $_POST['ptg_start_weeks']         ?? 1 ),
-			'span_weeks'    => absint( $_POST['ptg_span_weeks']          ?? 4 ),
-			'type_override' => sanitize_key( $_POST['ptg_type_override'] ?? '' ),
+			'preset'                        => sanitize_key( $_POST['ptg_preset']        ?? 'random' ),
+			'count'                         => absint( $_POST['ptg_count']               ?? 3 ),
+			'tasks_min'                     => absint( $_POST['ptg_tasks_min']           ?? 2 ),
+			'tasks_max'                     => absint( $_POST['ptg_tasks_max']           ?? 5 ),
+			'start_weeks'                   => absint( $_POST['ptg_start_weeks']         ?? 1 ),
+			'span_weeks'                    => absint( $_POST['ptg_span_weeks']          ?? 4 ),
+			'type_override'                 => sanitize_key( $_POST['ptg_type_override'] ?? '' ),
+			'cf_field_fill_pct'             => absint( $_POST['ptg_cf_field_fill_pct']             ?? 80 ),
+			'cf_template_assign_pct'        => absint( $_POST['ptg_cf_template_assign_pct']        ?? 70 ),
+			'cf_task_template_override_pct' => absint( $_POST['ptg_cf_task_template_override_pct'] ?? 30 ),
+			'wl_assign_pct'                 => absint( $_POST['ptg_wl_assign_pct']                 ?? 30 ),
 		);
 
 		$result         = PTG_Sheet_Generator::generate( $options );
@@ -564,8 +712,11 @@ class PTG_Admin {
 		$fill_raw = isset( $_POST['ptg_fill_rate'] ) ? floatval( $_POST['ptg_fill_rate'] ) : 60.0;
 
 		$options = array(
-			'fill_rate' => $fill_raw / 100.0,
-			'user_pct'  => absint( $_POST['ptg_user_pct'] ?? 50 ),
+			'fill_rate'         => $fill_raw / 100.0,
+			'user_pct'          => absint( $_POST['ptg_user_pct'] ?? 50 ),
+			'cf_field_fill_pct' => absint( $_POST['ptg_cf_field_fill_pct'] ?? 80 ),
+			'wl_min_per_task'   => absint( $_POST['ptg_wl_min_per_task'] ?? 1 ),
+			'wl_max_per_task'   => absint( $_POST['ptg_wl_max_per_task'] ?? 4 ),
 		);
 
 		$result         = PTG_Signup_Generator::generate( $options );

@@ -3,7 +3,7 @@
  * Plugin Name: PTA SUS Test Data Generator
  * Plugin URI:  https://github.com/
  * Description: Generates realistic test data (users, sheets, tasks, signups) for the PTA Volunteer Sign-Up Sheets plugin. For development/local use only.
- * Version:     1.0.0
+ * Version:     1.1.0
  * Author:      PTA Volunteer Suite
  * Text Domain: pta-sus-test-data-generator
  * License:     GPL-2.0+
@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'PTG_VERSION', '1.0.0' );
+define( 'PTG_VERSION', '1.1.0' );
 define( 'PTG_PATH', plugin_dir_path( __FILE__ ) );
 define( 'PTG_URL', plugin_dir_url( __FILE__ ) );
 
@@ -38,6 +38,7 @@ function ptg_init() {
 
 	require_once PTG_PATH . 'includes/class-ptg-tracker.php';
 	require_once PTG_PATH . 'includes/class-ptg-user-generator.php';
+	require_once PTG_PATH . 'includes/class-ptg-custom-fields-generator.php';
 	require_once PTG_PATH . 'includes/class-ptg-sheet-generator.php';
 	require_once PTG_PATH . 'includes/class-ptg-signup-generator.php';
 	require_once PTG_PATH . 'includes/class-ptg-admin.php';

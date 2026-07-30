@@ -12,13 +12,17 @@ class PTG_Sheet_Generator {
 	 * Generate sheets and tasks.
 	 *
 	 * @param array $options {
-	 *     @type string $preset        'bake_sale'|'carnival'|'committee'|'volunteer_fair'|'random'
-	 *     @type int    $count         Number of sheets to create.
-	 *     @type int    $tasks_min     Minimum tasks per sheet.
-	 *     @type int    $tasks_max     Maximum tasks per sheet.
-	 *     @type int    $start_weeks   Weeks from today before first date.
-	 *     @type int    $span_weeks    Width of date range in weeks.
-	 *     @type string $type_override Optional forced sheet type (ignored for non-random presets).
+	 *     @type string $preset                     'bake_sale'|'carnival'|'committee'|'volunteer_fair'|'random'
+	 *     @type int    $count                      Number of sheets to create.
+	 *     @type int    $tasks_min                  Minimum tasks per sheet.
+	 *     @type int    $tasks_max                  Maximum tasks per sheet.
+	 *     @type int    $start_weeks                Weeks from today before first date.
+	 *     @type int    $span_weeks                 Width of date range in weeks.
+	 *     @type string $type_override              Optional forced sheet type (ignored for non-random presets).
+	 *     @type int    $cf_field_fill_pct          0-100 chance to fill each eligible sheet/task-level Custom Field (default 80).
+	 *     @type int    $cf_template_assign_pct     0-100 chance to assign a random Signup Template to a sheet (default 70).
+	 *     @type int    $cf_task_template_override_pct 0-100 chance to instead/also assign a different template directly to one task (default 30).
+	 *     @type int    $wl_assign_pct              0-100 chance to assign a random Waitlist to a task (default 30).
 	 * }
 	 * @return array {
 	 *     @type array $sheets  List of created sheet info arrays.
@@ -27,13 +31,17 @@ class PTG_Sheet_Generator {
 	 */
 	public static function generate( $options ) {
 		$options = wp_parse_args( $options, array(
-			'preset'        => 'random',
-			'count'         => 3,
-			'tasks_min'     => 2,
-			'tasks_max'     => 5,
-			'start_weeks'   => 1,
-			'span_weeks'    => 4,
-			'type_override' => '',
+			'preset'                        => 'random',
+			'count'                         => 3,
+			'tasks_min'                     => 2,
+			'tasks_max'                     => 5,
+			'start_weeks'                   => 1,
+			'span_weeks'                    => 4,
+			'type_override'                 => '',
+			'cf_field_fill_pct'             => 80,
+			'cf_template_assign_pct'        => 70,
+			'cf_task_template_override_pct' => 30,
+			'wl_assign_pct'                 => 30,
 		) );
 
 		require_once PTG_PATH . 'includes/data/presets.php';
@@ -50,6 +58,32 @@ class PTG_Sheet_Generator {
 		$created = array();
 		$errors  = array();
 		$used_titles = array();
+
+		// Custom Fields / Waitlists integration (no-op if those extensions aren't active).
+		$cf_active = class_exists( 'Pta_Volunteer_Sus_Custom_Fields' );
+		$wl_active = class_exists( 'PTAVWL_Waitlist_Functions' );
+
+		$cf_sheet_fields = array();
+		$cf_task_fields  = array();
+		$cf_template_ids = array();
+		$wl_waitlist_ids = array();
+
+		if ( $cf_active ) {
+			require_once PTG_PATH . 'includes/class-ptg-custom-fields-generator.php';
+			foreach ( PTAVCF_Field_Functions::get_fields() as $field ) {
+				if ( $field->use_on_sheets() ) {
+					$cf_sheet_fields[] = $field;
+				}
+				if ( $field->use_on_tasks() ) {
+					$cf_task_fields[] = $field;
+				}
+			}
+			$cf_template_ids = PTAVCF_Template_Functions::get_template_ids();
+		}
+
+		if ( $wl_active ) {
+			$wl_waitlist_ids = PTAVWL_Waitlist_Functions::get_waitlist_ids();
+		}
 
 		for ( $s = 0; $s < absint( $options['count'] ); $s++ ) {
 			$sheet_type = self::resolve_sheet_type( $preset, $options['type_override'] );
@@ -87,9 +121,23 @@ class PTG_Sheet_Generator {
 
 			PTG_Tracker::add_sheet( $sheet_id );
 
+			$template_assignments = 0;
+			$waitlist_assignments = 0;
+
+			if ( $cf_active ) {
+				self::maybe_fill_fields( $sheet_id, 'sheet', $cf_sheet_fields, $options['cf_field_fill_pct'] );
+				if ( ! empty( $cf_template_ids ) && wp_rand( 1, 100 ) <= absint( $options['cf_template_assign_pct'] ) ) {
+					$template_id = $cf_template_ids[ array_rand( $cf_template_ids ) ];
+					if ( false !== PTAVCF_Assignment_Functions::bulk_set_sheet_assignment( array( $sheet_id ), $template_id ) ) {
+						$template_assignments++;
+					}
+				}
+			}
+
 			$task_count = rand( absint( $options['tasks_min'] ), max( absint( $options['tasks_min'] ), absint( $options['tasks_max'] ) ) );
 			$task_titles = self::pick_task_titles( $preset, $task_count );
 			$tasks_created = 0;
+			$sheet_task_ids = array();
 
 			foreach ( $task_titles as $idx => $task_title ) {
 				$task_dates  = self::task_dates_string( $sheet_type, $dates, $idx );
@@ -113,17 +161,43 @@ class PTG_Sheet_Generator {
 
 				if ( $task_id && ! is_wp_error( $task_id ) ) {
 					$tasks_created++;
+					$sheet_task_ids[] = $task_id;
+
+					if ( $cf_active ) {
+						self::maybe_fill_fields( $task_id, 'task', $cf_task_fields, $options['cf_field_fill_pct'] );
+					}
+
+					if ( $wl_active && ! empty( $wl_waitlist_ids ) && wp_rand( 1, 100 ) <= absint( $options['wl_assign_pct'] ) ) {
+						$waitlist_id = $wl_waitlist_ids[ array_rand( $wl_waitlist_ids ) ];
+						$result = PTAVWL_Waitlist_Functions::bulk_set_task_waitlist( array( $task_id ), $waitlist_id );
+						if ( ! empty( $result['saved'] ) ) {
+							$waitlist_assignments++;
+						}
+					}
 				} else {
 					$err_msg = is_wp_error( $task_id ) ? $task_id->get_error_message() : 'unknown error';
 					$errors[] = "Task error on sheet {$sheet_id} ({$task_title}): {$err_msg}";
 				}
 			}
 
+			// Occasionally assign a different template directly to one task, overriding the sheet-level
+			// assignment for that task only - exercises the task->sheet fallback resolution logic.
+			if ( $cf_active && ! empty( $cf_template_ids ) && ! empty( $sheet_task_ids )
+				&& wp_rand( 1, 100 ) <= absint( $options['cf_task_template_override_pct'] ) ) {
+				$override_task_id = $sheet_task_ids[ array_rand( $sheet_task_ids ) ];
+				$template_id       = $cf_template_ids[ array_rand( $cf_template_ids ) ];
+				if ( false !== PTAVCF_Assignment_Functions::bulk_set_task_assignment( array( $override_task_id ), $template_id ) ) {
+					$template_assignments++;
+				}
+			}
+
 			$created[] = array(
-				'id'         => $sheet_id,
-				'title'      => $title,
-				'type'       => $sheet_type,
-				'task_count' => $tasks_created,
+				'id'                    => $sheet_id,
+				'title'                 => $title,
+				'type'                  => $sheet_type,
+				'task_count'            => $tasks_created,
+				'template_assignments'  => $template_assignments,
+				'waitlist_assignments'  => $waitlist_assignments,
 			);
 		}
 
@@ -133,6 +207,25 @@ class PTG_Sheet_Generator {
 	// -----------------------------------------------------------------------
 	// Private helpers
 	// -----------------------------------------------------------------------
+
+	/**
+	 * Fill sheet-level or task-level Custom Fields with random values, skipping
+	 * each field some of the time so generated data looks realistically incomplete.
+	 *
+	 * @param int             $object_id Sheet or task ID.
+	 * @param string          $object    'sheet'|'task'
+	 * @param PTAVCF_Field[]  $fields    Eligible fields (already filtered by use_on_sheets()/use_on_tasks()).
+	 * @param int             $fill_pct  0-100 chance to fill each field.
+	 */
+	private static function maybe_fill_fields( $object_id, $object, array $fields, $fill_pct ) {
+		foreach ( $fields as $field ) {
+			if ( wp_rand( 1, 100 ) > absint( $fill_pct ) ) {
+				continue;
+			}
+			$value = PTG_Custom_Fields_Generator::generate_value_for_field( $field );
+			PTAVCF_Integrator::set_meta( $object_id, $field->get_slug(), $value, $object );
+		}
+	}
 
 	private static function resolve_sheet_type( $preset, $type_override ) {
 		if ( 'random' === $preset['sheet_type'] ) {
